@@ -1,0 +1,17 @@
+
+import { Enum } from 'cc';
+
+export enum PHY_GROUP {
+    DEFAULT = 1 << 0,
+    GROUND  = 1 << 1,
+    WEAPON  = 1 << 2,
+    FUNNEL  = 1 << 3,
+}
+
+Enum(PHY_GROUP);
+
+export const WEAPON_MASK_RESTING =
+    PHY_GROUP.DEFAULT | PHY_GROUP.GROUND | PHY_GROUP.WEAPON | PHY_GROUP.FUNNEL;
+
+export const WEAPON_MASK_FALLING =
+    PHY_GROUP.DEFAULT | PHY_GROUP.WEAPON | PHY_GROUP.FUNNEL;

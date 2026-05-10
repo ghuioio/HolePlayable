@@ -1,0 +1,30 @@
+{
+  "general": {
+    "designResolution": {
+      "width": 1920,
+      "height": 1080
+    }
+  },
+  "physics": {
+    "collisionGroups": [
+      {
+        "index": 1,
+        "name": "GROUND"
+      },
+      {
+        "index": 2,
+        "name": "WEAPON"
+      },
+      {
+        "index": 3,
+        "name": "FUNNEL"
+      }
+    ],
+    "collisionMatrix": {
+      "0": 7,
+      "1": 5,
+      "2": 15,
+      "3": 4
+    }
+  }
+}

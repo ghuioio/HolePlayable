@@ -1,0 +1,65 @@
+// Copyright (c) 2017-2020 Xiamen Yaji Software Co., Ltd.
+// Ground Stencil Reader — renders only where stencil != 1 (i.e., NOT inside the hole).
+// Apply this to the Ground mesh so it becomes invisible inside the hole area.
+
+CCEffect %{
+  techniques:
+  - name: stencil-ground
+    passes:
+    - vert: unlit-vs:vert
+      frag: unlit-fs:frag
+      priority: 10
+      rasterizerState:
+        cullMode: back
+      depthStencilState:
+        depthTest: true
+        depthWrite: true
+        stencilTestFront: true
+        stencilFuncFront: not_equal
+        stencilRefFront: 1
+        stencilReadMaskFront: 255
+        stencilWriteMaskFront: 0
+        stencilPassOpFront: keep
+        stencilFailOpFront: keep
+        stencilZFailOpFront: keep
+        stencilTestBack: true
+        stencilFuncBack: not_equal
+        stencilRefBack: 1
+        stencilReadMaskBack: 255
+        stencilWriteMaskBack: 0
+        stencilPassOpBack: keep
+        stencilFailOpBack: keep
+        stencilZFailOpBack: keep
+      properties:
+        mainColor: { value: [0.55, 0.63, 0.51, 1.0], editor: { type: color } }
+}%
+
+CCProgram unlit-vs %{
+  precision highp float;
+  #include <cc-global>
+  #include <cc-local-batch>
+  #include <input>
+
+  vec4 vert () {
+    vec4 position;
+    CCVertInput(position);
+
+    mat4 matWorld;
+    CCGetWorldMatrix(matWorld);
+
+    return cc_matProj * (cc_matView * matWorld) * position;
+  }
+}%
+
+CCProgram unlit-fs %{
+  precision highp float;
+  #include <output-standard>
+
+  uniform Constant {
+    vec4 mainColor;
+  };
+
+  vec4 frag () {
+    return CCFragOutput(mainColor);
+  }
+}%
