@@ -1207,7 +1207,7 @@
     "_priority": 1073741824,
     "_fov": 45,
     "_fovAxis": 0,
-    "_orthoHeight": 540,
+    "_orthoHeight": 960.0000000000001,
     "_near": 1,
     "_far": 2000,
     "_color": {
@@ -1352,16 +1352,12 @@
     },
     "_enabled": true,
     "__prefab": null,
-    "bulletPrefab": {
-      "__uuid__": "e419f539-0375-4744-950b-c8f9de22cb8f",
+    "blockStaticPrefab": {
+      "__uuid__": "50b12823-facf-4337-af36-0b10a1f03562",
       "__expectedType__": "cc.Prefab"
     },
-    "grenadePrefab": {
-      "__uuid__": "563c99f6-b97a-4ee5-9fdb-b63474259fc1",
-      "__expectedType__": "cc.Prefab"
-    },
-    "gunPrefab": {
-      "__uuid__": "c0e35132-ab62-4119-aaa5-6b7fbab0f0f8",
+    "blockDynamicPrefab": {
+      "__uuid__": "c98b67b9-e41b-405b-bc75-20c5a10ef8f1",
       "__expectedType__": "cc.Prefab"
     },
     "holeController": {
@@ -1369,6 +1365,9 @@
     },
     "weaponContainer": {
       "__id__": 42
+    },
+    "groundNode": {
+      "__id__": 4
     },
     "_id": "02ufFsAltL74B0ZGBS2Ly+"
   },

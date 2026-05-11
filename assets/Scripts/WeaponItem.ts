@@ -4,7 +4,7 @@ import {
     RigidBody, Collider, BoxCollider, SphereCollider,
     ERigidBodyType
 } from 'cc';
-import { PHY_GROUP, WEAPON_MASK_RESTING, WEAPON_MASK_FALLING } from './PhysicsGroups';
+import { PHY_GROUP, WEAPON_MASK_RESTING, WEAPON_MASK_FALLING, BLOCK_MASK_DYNAMIC } from './PhysicsGroups';
 const { ccclass, property } = _decorator;
 
 enum WeaponState {
@@ -22,6 +22,9 @@ export class WeaponItem extends Component {
     @property
     public mass: number = 1;
 
+    @property
+    public startsStatic: boolean = true;
+
     private _state: WeaponState = WeaponState.RESTING;
     private _holeCenter: Vec3 = new Vec3();
     private _holeRadius: number = 1.0;
@@ -33,22 +36,29 @@ export class WeaponItem extends Component {
     private static readonly ABYSS_DELAY = 0.05;
     private static readonly ABYSS_IMPULSE = 30;
 
-    public get isSwallowing () { return this._state >= WeaponState.FALLING; }
+    public get isSwallowing() { return this._state >= WeaponState.FALLING; }
 
-    start () {
+    start() {
         if (this.boundingSize <= 0) {
             this.boundingSize = this._calcBoundingSize();
         }
 
-        this._applyPhysicsGroup(WEAPON_MASK_RESTING);
-
         const rb = this.getComponent(RigidBody);
-        if (rb) {
-            rb.type = ERigidBodyType.STATIC;
+        if (this.startsStatic) {
+            this._applyPhysicsGroup(WEAPON_MASK_RESTING);
+            if (rb) {
+                rb.type = ERigidBodyType.STATIC;
+            }
+        } else {
+            this._applyPhysicsGroup(BLOCK_MASK_DYNAMIC);
+            if (rb) {
+                rb.type = ERigidBodyType.DYNAMIC;
+                rb.useGravity = true;
+            }
         }
     }
 
-    update (dt: number) {
+    update(dt: number) {
         if (this._state !== WeaponState.FALLING) return;
         this._fallTimer += dt;
 
@@ -85,7 +95,7 @@ export class WeaponItem extends Component {
         }
     }
 
-    public startFalling (holeCenter: Vec3, holeRadius: number = 1.0): Promise<void> {
+    public startFalling(holeCenter: Vec3, holeRadius: number = 1.0): Promise<void> {
         if (this._state >= WeaponState.FALLING) return Promise.resolve();
         this._state = WeaponState.FALLING;
         this._holeCenter.set(holeCenter);
@@ -121,7 +131,7 @@ export class WeaponItem extends Component {
         });
     }
 
-    public cancelFalling (): boolean {
+    public cancelFalling(): boolean {
         if (this._state !== WeaponState.FALLING) return false;
 
         if (this._abyssImpulseFired) return false;
@@ -162,7 +172,7 @@ export class WeaponItem extends Component {
         return true;
     }
 
-    public applyEdgeWobble (holeCenter: Vec3) {
+    public applyEdgeWobble(holeCenter: Vec3) {
         if (this._state !== WeaponState.RESTING) return;
         const rb = this.getComponent(RigidBody);
         if (!rb) return;
@@ -190,7 +200,7 @@ export class WeaponItem extends Component {
         rb.applyTorque(torque);
     }
 
-    private _applyTangentTorque (rb: RigidBody) {
+    private _applyTangentTorque(rb: RigidBody) {
         const pos = this.node.worldPosition;
 
         const radial = new Vec3();
@@ -228,7 +238,7 @@ export class WeaponItem extends Component {
         rb.applyTorque(torqueAxis);
     }
 
-    private _applyPhysicsGroup (mask: number) {
+    private _applyPhysicsGroup(mask: number) {
         const rb = this.getComponent(RigidBody);
         if (rb) {
             rb.setGroup(PHY_GROUP.WEAPON);
@@ -242,7 +252,7 @@ export class WeaponItem extends Component {
         }
     }
 
-    private _calcBoundingSize (): number {
+    private _calcBoundingSize(): number {
         const s = this.node.scale;
         const box = this.getComponent(BoxCollider);
         if (box) {

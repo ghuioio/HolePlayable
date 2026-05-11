@@ -1,7 +1,7 @@
 
 import {
-    _decorator, Component, Node, Vec3, Prefab, instantiate, tween,
-    Label, UIOpacity, UITransform, Size, Color
+    _decorator, Component, Node, Vec3, Prefab, instantiate,
+    Collider, RigidBody
 } from 'cc';
 import { HoleController } from './HoleController';
 import { WeaponItem } from './WeaponItem';
@@ -16,13 +16,10 @@ enum GamePhase {
 export class GameManager extends Component {
 
     @property({ type: Prefab })
-    public bulletPrefab: Prefab | null = null;
+    public blockStaticPrefab: Prefab | null = null;
 
     @property({ type: Prefab })
-    public grenadePrefab: Prefab | null = null;
-
-    @property({ type: Prefab })
-    public gunPrefab: Prefab | null = null;
+    public blockDynamicPrefab: Prefab | null = null;
 
     @property({ type: HoleController })
     public holeController: HoleController | null = null;
@@ -30,24 +27,42 @@ export class GameManager extends Component {
     @property({ type: Node })
     public weaponContainer: Node | null = null;
 
+    @property({ type: Node })
+    public groundNode: Node | null = null;
+
+    private static readonly GRID_W = 6;
+    private static readonly GRID_H = 6;
+    private static readonly GRID_D = 6;
+
+    private static readonly ORIGIN_X = -2.5;
+    private static readonly ORIGIN_Y = 0.5;
+    private static readonly ORIGIN_Z = -2.5;
+
     private _phase: GamePhase = GamePhase.EATING;
     private _holeLevel: number = 1;
     private _weaponsEaten: number = 0;
 
-    private static readonly WEAPON_ROWS: Array<[number, number, number, number]> = [
-        [0, 5, 5, 6],
-        [0, 3, 5, 6],
-        [1, 0, 4, 5],
-        [1, -2, 4, 5],
-        [2, -5, 3, 4],
-        [2, -7, 3, 4],
-    ];
-
-    private static readonly LEVEL_THRESHOLDS = [0, 10, 8, 6];
-
     start() {
+        this._patchGroundMask();
         this._wireHole();
-        this._placeWeapons();
+        this._placeBlocks();
+    }
+
+    private _patchGroundMask() {
+        const gNode = this.groundNode
+            ?? this.node.scene?.getChildByName('Ground')
+            ?? null;
+        if (!gNode) {
+            console.warn('GameManager: groundNode not found — dynamic blocks may fall through.');
+            return;
+        }
+        const WEAPON_BIT = 1 << 2;
+        const cols = gNode.getComponents(Collider);
+        for (const col of cols) {
+            col.setMask(col.getMask() | WEAPON_BIT);
+        }
+        const rb = gNode.getComponent(RigidBody);
+        if (rb) rb.setMask(rb.getMask() | WEAPON_BIT);
     }
 
     private _wireHole() {
@@ -60,29 +75,31 @@ export class GameManager extends Component {
         };
     }
 
-    private _placeWeapons() {
+    private _placeBlocks() {
+        if (!this.blockStaticPrefab || !this.blockDynamicPrefab) {
+            console.warn('GameManager: blockStaticPrefab or blockDynamicPrefab not assigned!');
+            return;
+        }
         const container = this.weaponContainer || this.node;
-        const prefabs = [this.bulletPrefab, this.grenadePrefab, this.gunPrefab];
+        const { GRID_W, GRID_H, GRID_D, ORIGIN_X, ORIGIN_Y, ORIGIN_Z } = GameManager;
 
-        for (const [prefabIdx, z, count, xSpread] of GameManager.WEAPON_ROWS) {
-            const prefab = prefabs[prefabIdx];
-            if (!prefab) {
-                console.warn(`GameManager: No prefab at index ${prefabIdx}`);
-                continue;
-            }
-
-            for (let i = 0; i < count; i++) {
-                const x = count > 1
-                    ? -xSpread / 2 + (xSpread / (count - 1)) * i
-                    : 0;
-
-                const node = instantiate(prefab);
-                container.addChild(node);
-
-                const rx = (Math.random() - 0.5) * 0.4;
-                const rz = (Math.random() - 0.5) * 0.4;
-                node.setPosition(x + rx, node.position.y, z + rz);
-                node.setRotationFromEuler(0, Math.random() * 360, 0);
+        for (let ix = 0; ix < GRID_W; ix++) {
+            for (let iy = 0; iy < GRID_H; iy++) {
+                for (let iz = 0; iz < GRID_D; iz++) {
+                    const isGround = iy === 0;
+                    const prefab = isGround ? this.blockStaticPrefab : this.blockDynamicPrefab;
+                    const node = instantiate(prefab);
+                    container.addChild(node);
+                    node.setWorldPosition(
+                        ORIGIN_X + ix,
+                        ORIGIN_Y + iy,
+                        ORIGIN_Z + iz
+                    );
+                    if (!isGround) {
+                        const wi = node.getComponent(WeaponItem);
+                        if (wi) wi.startsStatic = false;
+                    }
+                }
             }
         }
     }

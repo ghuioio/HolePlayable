@@ -22,7 +22,7 @@ export class HoleController extends Component {
 
     private _holeDiameter: number = 2.0;
 
-    private static readonly DIAMETER_BY_LEVEL: number[] = [1.0, 1.5, 2.0];
+    private static readonly DIAMETER_BY_LEVEL: number[] = [1.0, 1.5, 2.0, 2.5];
 
     private _isDragging: boolean = false;
     private _targetPos: Vec3 = new Vec3();
@@ -66,6 +66,8 @@ export class HoleController extends Component {
 
         const holeCenter = this.node.worldPosition;
         const holeRadius = this.holeRadius;
+        let nearestWeapon: WeaponItem | null = null;
+        let nearestDist = Infinity;
 
         this._weaponsInZone.forEach(weapon => {
             if (!weapon || !weapon.node || !weapon.node.isValid) {
@@ -83,22 +85,12 @@ export class HoleController extends Component {
             const dz = wp.z - holeCenter.z;
             const distXZ = Math.sqrt(dx * dx + dz * dz);
 
-            if (weapon.boundingSize <= this._holeDiameter) {
-                if (distXZ < holeRadius * 0.8) {
-                    const held = (this._fallHoldTimers.get(weapon) ?? 0) + dt;
-                    this._fallHoldTimers.set(weapon, held);
-                    if (held >= HoleController.FALL_HOLD_TIME) {
-                        this._fallHoldTimers.delete(weapon);
-                        weapon.startFalling(holeCenter, holeRadius).then(() => {
-                            if (this.onWeaponConsumed) {
-                                this.onWeaponConsumed(weapon.boundingSize);
-                            }
-                        });
-                    }
-                } else {
-                    this._fallHoldTimers.delete(weapon);
+            if (weapon.boundingSize <= this._holeDiameter && distXZ < holeRadius * 0.8) {
+                if (distXZ < nearestDist) {
+                    nearestDist = distXZ;
+                    nearestWeapon = weapon;
                 }
-            } else {
+            } else if (weapon.boundingSize > this._holeDiameter) {
                 if (distXZ < holeRadius + 0.5) {
                     const uid = weapon.node.uuid;
                     const cd = this._wobbleCooldowns.get(uid) || 0;
@@ -107,6 +99,24 @@ export class HoleController extends Component {
                         this._wobbleCooldowns.set(uid, 0.4);
                     }
                 }
+            }
+        });
+        this._weaponsInZone.forEach(weapon => {
+            if (!weapon || !weapon.node || !weapon.node.isValid || weapon.isSwallowing) return;
+            if (weapon === nearestWeapon) {
+                const held = (this._fallHoldTimers.get(weapon) ?? 0) + dt;
+                this._fallHoldTimers.set(weapon, held);
+                if (held >= HoleController.FALL_HOLD_TIME) {
+                    this._fallHoldTimers.delete(weapon);
+                    console.log('Swallowing: ' + weapon.node.name);
+                    weapon.startFalling(holeCenter, holeRadius).then(() => {
+                        if (this.onWeaponConsumed) {
+                            this.onWeaponConsumed(weapon.boundingSize);
+                        }
+                    });
+                }
+            } else {
+                this._fallHoldTimers.delete(weapon);
             }
         });
 
@@ -177,13 +187,7 @@ export class HoleController extends Component {
     }
 
     private _findWeapon(node: Node): WeaponItem | null {
-        let current: Node | null = node;
-        while (current) {
-            const w = current.getComponent(WeaponItem);
-            if (w) return w;
-            current = current.parent;
-        }
-        return null;
+        return node.getComponent(WeaponItem);
     }
 
     private _registerInput() {
