@@ -169,7 +169,9 @@ export class HoleController extends Component {
     }
 
     private _onTriggerEnter(event: ITriggerEvent) {
-        const weapon = this._findWeapon(event.otherCollider.node);
+        const touchedNode = event.otherCollider.node;
+        const weapon = this._findWeapon(touchedNode);
+        console.log('[HoleController] Triggered node:', touchedNode.name, '| Found Weapon:', weapon ? weapon.node.name : 'null');
         if (weapon && !weapon.isSwallowing) {
             this._weaponsInZone.add(weapon);
         }
@@ -187,7 +189,16 @@ export class HoleController extends Component {
     }
 
     private _findWeapon(node: Node): WeaponItem | null {
-        return node.getComponent(WeaponItem);
+        const direct = node.getComponent(WeaponItem);
+        if (direct) return direct;
+
+        const parent = node.parent;
+        if (parent) {
+            const parentWeapon = parent.getComponent(WeaponItem);
+            if (parentWeapon) return parentWeapon;
+        }
+
+        return null;
     }
 
     private _registerInput() {

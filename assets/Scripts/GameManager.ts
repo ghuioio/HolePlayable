@@ -95,10 +95,6 @@ export class GameManager extends Component {
                         ORIGIN_Y + iy,
                         ORIGIN_Z + iz
                     );
-                    if (!isGround) {
-                        const wi = node.getComponent(WeaponItem);
-                        if (wi) wi.startsStatic = false;
-                    }
                 }
             }
         }

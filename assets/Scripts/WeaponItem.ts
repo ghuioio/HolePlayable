@@ -97,9 +97,17 @@ export class WeaponItem extends Component {
 
     public startFalling(holeCenter: Vec3, holeRadius: number = 1.0): Promise<void> {
         if (this._state >= WeaponState.FALLING) return Promise.resolve();
+
+        if (this.node.children.length > 5) {
+            console.warn(`[WeaponItem] startFalling aborted on "${this.node.name}": has ${this.node.children.length} children — likely a container, not a weapon.`);
+            return Promise.resolve();
+        }
+
         this._state = WeaponState.FALLING;
         this._holeCenter.set(holeCenter);
         this._holeRadius = holeRadius;
+
+        this._activateBlockAbove();
 
         return new Promise<void>((resolve) => {
             this._resolveConsume = resolve;
@@ -129,6 +137,39 @@ export class WeaponItem extends Component {
                 ));
             }
         });
+    }
+
+    public makeDynamic() {
+        if (this._state !== WeaponState.RESTING) return;
+        this._applyPhysicsGroup(BLOCK_MASK_DYNAMIC);
+        const rb = this.getComponent(RigidBody);
+        if (rb) {
+            rb.type = ERigidBodyType.DYNAMIC;
+            rb.useGravity = true;
+        }
+        this._activateBlockAbove();
+    }
+
+    private _activateBlockAbove() {
+        const myPos = this.node.worldPosition;
+        const parent = this.node.parent;
+        if (!parent) return;
+
+        for (const sibling of parent.children) {
+            if (sibling === this.node) continue;
+            const weapon = sibling.getComponent(WeaponItem);
+            if (!weapon || weapon.isSwallowing) continue;
+
+            const sp = sibling.worldPosition;
+            const dx = Math.abs(sp.x - myPos.x);
+            const dy = sp.y - myPos.y;
+            const dz = Math.abs(sp.z - myPos.z);
+
+            if (dx < 0.1 && dz < 0.1 && dy > 0.8 && dy < 1.2) {
+                weapon.makeDynamic();
+                break;
+            }
+        }
     }
 
     public cancelFalling(): boolean {
